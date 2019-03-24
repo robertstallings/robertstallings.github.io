@@ -1,0 +1,354 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<!-- Taken and liberally modified from
+  https://www.paypal-community.com/t5/Merchant-Products-and-Services/Multiple-Items-Multiple-Quantities-using-paypal-buttons/td-p/1507179
+-->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Day / Twilight Camp`</title>
+
+<!-- Start of Script -->
+
+<script type = "text/javascript" >
+var order = new Object();  // object to store order items in
+var root  = new Object();  // selection criteria
+var on    = true;
+var off   = false;
+var cntr  = 0;             // items in object
+var opts  = 5;             // number of options to allow
+var shpr  = function (wt) {return 0;} // what to charge for shipping;
+var stxt  = "";            // shipping text
+var spos  = -1;            // shipping position selector
+var ttax  = 0;             // percent for taxes
+var ttxt  = "0";           // tax text
+var tpos  = -1;            // tax position selector
+var tamt=0,tqty=0,twgt=0,wgt=0,thnd=0;  // totals
+
+root.hamt = 0;     // amount, below which, handling charge applies
+root.hand = 0;     // handling charge for orders less than hamt
+root.shp  = off;    // shipping selection line
+root.tax  = off;    // tax selection line
+// place for user-specific options
+root.xx_can  = "";   // place for PayPal cancel return path
+root.xx_cur  = "USD";// enter default currency code (or null)
+root.xx_id   = "cubscout.pack1500@gmail.com";  //live
+//root.xx_id   = "cubscout.pack1500-buyer@gmail.com"; // sandbox
+root.xx_img  = ""; // image URL
+root.xx_lc   = "US"; // enter default country code (or null)
+root.xx_ret  = ""; // place for PayPal return path
+root.xx_sty  = ""; // place for PayPal page style
+root.xx_xtra = "&rm=2"; // place for other PayPal commands
+
+// Restricts input for the given textbox to the given inputFilter.
+function setInputFilter(textbox, inputFilter) {
+  ["input", "keydown", "keyup", "mousedown", "mouseup", "select", "contextmenu", "drop"].forEach(function(event) {
+    textbox.addEventListener(event, function() {
+      if (inputFilter(this.value)) {
+        this.oldValue = this.value;
+        this.oldSelectionStart = this.selectionStart;
+        this.oldSelectionEnd = this.selectionEnd;
+      } else if (this.hasOwnProperty("oldValue")) {
+        this.value = this.oldValue;
+        this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
+      }
+    });
+  });
+}
+
+function updateTextBox(id, elvalue) {
+  document.getElementById(id).value = elvalue
+}
+
+function CalcRoot () {  // calc root stuff
+  if (root.shp) spos=0; 
+  if (root.tax) tpos=0;
+}
+
+function DispTots () {  // display totals on the page
+var tmp,d;
+// paypal surcharge
+tmp = (tamt * 0.029) + 0.30;
+  d = document.orderf;
+  d.sub.value = Dollar (tamt);
+  d.tot.value = Dollar (tamt  + tmp);
+}
+
+function Dollar (val) {     // force to valid dollar amount
+var str,pos,rnd=0;
+  if (val < .995) rnd = 1;  // for old Netscape browsers
+  str = escape (val*1.0 + 0.005001 + rnd);  // float, round, escape
+  pos = str.indexOf (".");  // should be one, but OK if not
+  if (pos > 0) str = str.substring (rnd, pos + 3);
+  return str;               // return valid string
+}
+
+function GetSelectOrder(id, des) {
+ // Determine Amount
+ var nr = id.substring (2);
+ var el = document.getElementById('sl' + nr)
+ var ds = el.options[el.selectedIndex].text
+ var val = el.value
+ GetOrder(id, ds, val);
+}
+
+function GetOrder (id, des, amt) {  // get all ordered items
+var i,nr,val,qty,pos;
+var op = new Array ();    // accumulate options here
+  tamt=0,tqty=0;   // zero totals
+  nr = id.substring (2);  // get number part of ID
+  qty = document.orderf["qty" + nr].value;  // get qty
+
+ 
+  if (isNaN (qty)) {      // test entry
+    alert ("That is not a valid number!  Try again.");
+    return;
+  }
+  for (i=1; i<=opts; i++) {     // see if any options
+    if (document.orderf["op" + i + nr]) {
+      val = document.orderf["op" + i + nr].value;  // get option
+      op[i] = val;
+      pos  = val.indexOf ("+"); // price increment?
+      if (pos > 0) amt = amt + val.substring (pos + 1)*1.0;
+      pos  = val.indexOf ("%"); // percent change?
+      if (pos > 0) amt = amt + (amt * val.substring (pos + 1)/100.0);
+    }
+    else op[i] = "";
+  }
+  document.orderf["prc" + nr].value = Dollar (qty * amt);
+  if (cntr == 0) order = new Object (); // zap object
+  cntr = cntr + 1;               // bump counter so no zap next time
+  order[id] = new Object ();     // create new entry
+  for (i=1; i<=opts; i++)        // load options
+    if (op[i] != "") des = des + ", OP" + i + "=" + op[i];
+  order[id].des = des;           // load up values
+  order[id].amt = Dollar (amt);
+  order[id].qty = qty;
+  for (i in order) {             // calc totals we might use
+    qty = order[i].qty*1.0;
+    tamt = tamt + order[i].amt * qty;  // total amount
+    tqty = tqty + qty;                 // total quantity
+  }
+  DispTots ();                         // calc totals
+}
+
+
+function SendCart () {  // send the cart to PayPal
+var frst = true;  // 1st pass thru items.
+var winpar = "width=710,height=390,scrollbars," +
+             "location,resizable,status";
+//Change the lines for either testing mode (sandbox) or live mode
+
+//var strn   = "https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_cart" + "&upload=1" + "&business=" + root.xx_id + root.xx_xtra;            
+var strn   = "https://www.paypal.com/cgi-bin/webscr?cmd=_cart" + "&upload=1" + "&business=" + root.xx_id + root.xx_xtra;
+ 
+var i,j=0,des;
+  if (root.xx_cur.length > 0)
+    strn = strn + "&currency_code=" + root.xx_cur;
+  if (root.xx_lc.length > 0)
+    strn = strn + "&lc=" + root.xx_lc;
+  if (root.xx_can.length > 0)
+    strn = strn + "&cancel_return=" + root.xx_can;
+  if (root.xx_ret.length > 0)
+    strn = strn + "&return=" + root.xx_ret;
+  if (root.xx_sty.length > 0)
+    strn = strn + "&page_style=" + root.xx_sty;
+  if (root.xx_img.length > 0)
+    strn = strn + "&image_url=" + root.xx_img;
+  if (document.getElementById("sname") && document.getElementById("dennum")) {
+    sn = document.getElementById("sname").value;
+    dn = document.getElementById("dennum").value;
+    if(sn && dn) {
+      strn = strn + "&custom=" + encodeURIComponent(sn + " " + dn);
+    }
+    else {
+      alert("Missing Child Name and Den Number");
+      return;
+    }
+  }
+  else {
+    alert("Missing Child Name and Den Number");
+    return;
+  }
+  if (tpos > 0) strn = strn + "&tax_cart=" + Dollar (tamt*ttax/100);
+  for (i in order) {  // send all valid data
+    if (order[i].qty > 0) {
+      j = j + 1;
+      des = order[i].des;
+      strn = strn + "&item_name_"    + j + "=" + escape (des) +
+                    "&item_number_"  + j + "=" + i +
+                    "&quantity_"     + j + "=" + order[i].qty +
+                    "&amount_"       + j + "=" + order[i].amt;
+}
+  }
+  if (j > 0) { 
+    window.open (strn, "paypal", winpar);
+  }
+  else {
+    alert("No Quantity Data Entered");
+  }
+}
+
+
+function SetShp (obj) {  // set shipping on user selection
+  shpr = function (wt) {return 0;}  // zap it
+  spos = obj.selectedIndex;  // which option selected
+  stxt = obj.options[spos].text;
+  // set various shipping functions.
+  if (spos == 1) shpr = function (wt) {return 0;}
+  if (spos == 2) shpr = function (wt) {return 4.95;}
+  if (spos == 3) shpr = function (wt) {return 10;}
+  if (spos == 4) shpr = function (wt) {return wt * 2.50;}
+  DispTots ();
+}
+
+function SetTax (obj) {
+  tpos = obj.selectedIndex;  // which option selected
+  ttxt = obj.options[tpos].text;
+  ttax = obj.options[tpos].value*1.0;
+  DispTots ();
+}
+
+function restrictNumericTextBoxes() {
+ tboxes = ["dennum"]
+ qboxes = [10, 15, 20]
+ //qty
+ for(var i = 0; i < tboxes.length; i++) {
+   restrictNumericTextBox(tboxes[i]);
+ }
+ for(var i = 0; i < qboxes.length; i++) {
+   restrictNumericTextBox('qty' + qboxes[i]);
+ }
+ 
+}
+
+function restrictNumericTextBox(id) {
+    setInputFilter(document.getElementById(id), function(value) {
+        return /^\d*$/.test(value);
+    });
+}
+</script>
+
+<!-- End of Script -->
+
+</head>
+
+<body onload="restrictNumericTextBoxes()">
+
+  <form name="orderf" id="orderf" 
+    method="post" action="javascript&colon;void 0;">
+  
+    <table cellspacing = "0"
+       cellpadding = "4"
+       border  = "3"
+       frame   = "box"
+       rules   = "all"
+       summary = "Ticket Reservations">
+      <caption><h3>Daycamp / Twilight Camp</h3>
+      </caption>
+        <tr style="background-color:#D3D3D3">
+          <th align="left">Description</th>
+          <th>Choice</th>
+          <th>Price for each</th>
+          <th>Quantity</th>
+          <th>Total</th>
+        </tr>
+        
+        <tr>
+          <td>Camp Type</td>
+          <td>
+            <select id="sl10" onchange="updateTextBox('campamt', this.value)">
+                <option value="190.00">Day Camp</option>
+                <option value="110.00">Twilight Camp</option>
+            </select>
+          <td align="right"><input id="campamt" value="190.00" disabled></input></td>
+          <td>
+              <input type="text" id="qty10" name="qty10" size="2" />
+&nbsp;
+              <a href="javascript&colon;
+      GetSelectOrder ('id10',
+                'CampType');">add</a>
+          </td>
+          <td>
+            <input class="nbor" type="text" name="prc10" size="6" value="0.00" disabled />
+          </td>
+        </tr>
+
+        
+        <tr>
+          <td>Extra T-Shirts (Youth S to Adult XL)</td>
+          <td align="center">N/A</td>
+          <td align="left">15.00</td>
+    <td>
+      <input type="text" id="qty15" name="qty15" size="2" />
+&nbsp;
+      <a href="javascript&colon;
+      GetOrder ('id15',
+                't-shirt-ys-axl',
+                15.00);">add</a>
+    </td>
+
+    <td>
+      <input class="nbor" type="text" name="prc15" size="6" value="0.00" disabled />
+    </td>
+  </tr>
+        
+        <tr>
+          <td>Extra T-Shirts (Adult XXL to XXXL)</td>
+          <td align="center">N/A</td>
+          <td align="left">18.00</td>
+    <td>
+      <input type="text" id="qty20" name="qty20" size="2" />
+&nbsp;
+      <a href="javascript&colon;
+      GetOrder ('id20',
+                't-shirt-axxl-axxxl',
+                18.00);">add</a>
+    </td>
+
+    <td>
+      <input class="nbor" type="text" name="prc20" size="6" value="0.00" disabled />
+    </td>
+  </tr>
+        <tr>
+          <td align="right" colspan="3">
+          Scout(s) Name: <input class="sname" type="text" id="sname" name="sname" size="20" />
+          </td>
+          <td align="right" colspan="2">
+            Den Numbers: <input id="dennum" class="dnum" type="text" name="dnum" size="2" />
+          </td>
+        <tr>
+          <td align="right" colspan="6">
+Subtotal = 
+            <input class="nbor" type="text" name="sub" size="10" value="0.00" disabled />
+          </td>
+        </tr>
+        
+
+        <tr>
+          <td align="right" colspan="6">
+            <input type    = "button" 
+             value   = "Reset"
+             onclick = "cntr = 0;  // zap cart
+                        shpr = function (wt) {return 0;}
+                        if (root.shp) spos = 0;
+                        if (root.tax) tpos = 0;
+                        this.form.reset();" />
+      &nbsp; &nbsp; 
+            <input type    = "button"
+             value   = "Checkout"
+             onclick = "SendCart ();" />
+      &nbsp; &nbsp;
+Total Plus Surcharge
+            <script type="text/javascript">
+                if (root.xx_cur.length > 0)
+                    document.writeln (" (", root.xx_cur, ")");
+            </script>
+ =  
+            <input class="nbor" type="text" name="tot" size="10" value="0.00" disabled />
+    </td>
+  </tr>
+        
+    </table>
+</form>
+</body>
+</html
