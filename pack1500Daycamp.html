@@ -174,10 +174,11 @@ var i,j=0,des;
     if (order[i].qty > 0) {
       j = j + 1;
       des = order[i].des;
+      totChart = Dollar((order[i].amt * 0.029) + 0.30 + order[i].amt); 
       strn = strn + "&item_name_"    + j + "=" + escape (des) +
                     "&item_number_"  + j + "=" + i +
                     "&quantity_"     + j + "=" + order[i].qty +
-                    "&amount_"       + j + "=" + order[i].amt;
+                    "&amount_"       + j + "=" + (order[i].amt;
 }
   }
   if (j > 0) { 
