@@ -174,8 +174,8 @@ var i,j=0,des;
     if (order[i].qty > 0) {
       j = j + 1;
       des = order[i].des;
-      totChart = Dollar((order[i].amt * 0.029) + 0.30 + order[i].amt); 
-      alert(totChart);
+      amount = parseInt(order[i].amt);
+      totChart = Dollar(((amount * 0.029) + 0.30 + amount) + ''); 
       strn = strn + "&item_name_"    + j + "=" + escape (des) +
                     "&item_number_"  + j + "=" + i +
                     "&quantity_"     + j + "=" + order[i].qty +
