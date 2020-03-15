@@ -67,10 +67,10 @@ function CalcRoot () {  // calc root stuff
 function DispTots () {  // display totals on the page
 var tmp,d;
 // paypal surcharge
-tmp = (tamt * 0.029) + 0.30;
+  tmpTot = ((tamt + 0.30) / (1 - 0.029)) + '';
   d = document.orderf;
   d.sub.value = Dollar (tamt);
-  d.tot.value = Dollar (tamt  + tmp);
+  d.tot.value = Dollar (tmpTot);
 }
 
 function Dollar (val) {     // force to valid dollar amount
